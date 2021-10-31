@@ -46,13 +46,13 @@ import org.springframework.util.ReflectionUtils;
  *
  * @author Stephane Nicoll
  */
-class InjectionPointsSupplier {
+public class InjectionPointsSupplier {
 
 	private static final Log logger = LogFactory.getLog(InjectionPointsSupplier.class);
 
 	private final Set<Class<? extends Annotation>> autowiredAnnotationTypes = new LinkedHashSet<>(4);
 
-	InjectionPointsSupplier(ClassLoader classLoader) {
+	public InjectionPointsSupplier(ClassLoader classLoader) {
 		this.autowiredAnnotationTypes.add(Autowired.class);
 		this.autowiredAnnotationTypes.add(Value.class);
 		Class<? extends Annotation> jsr310Inject = safeGetJsr330Inject(classLoader);
@@ -71,7 +71,7 @@ class InjectionPointsSupplier {
 		}
 	}
 
-	List<MemberDescriptor<?>> detectInjectionPoints(Class<?> clazz) {
+	public List<MemberDescriptor<?>> detectInjectionPoints(Class<?> clazz) {
 		List<MemberDescriptor<?>> result = new ArrayList<>();
 		if (!AnnotationUtils.isCandidateClass(clazz, this.autowiredAnnotationTypes)) {
 			return Collections.emptyList();

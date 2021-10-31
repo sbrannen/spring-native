@@ -19,8 +19,6 @@ package org.springframework.aot.test.boot;
 import java.util.Collections;
 
 import org.springframework.aot.SpringApplicationAotUtils;
-import org.springframework.beans.factory.annotation.AutowiredAnnotationBeanPostProcessor;
-import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.test.context.ReactiveWebMergedContextConfiguration;
@@ -74,8 +72,6 @@ public class SpringBootAotContextLoader extends SpringBootContextLoader {
 		application.setApplicationContextFactory(SpringApplicationAotUtils.AOT_FACTORY);
 		ConfigurableApplicationContext context = application.run(args);
 
-		// FIXME: register Autowired support after the context has started for the test class
-		configureAutowiringSupport(context.getBeanFactory());
 		return context;
 	}
 
@@ -100,12 +96,6 @@ public class SpringBootAotContextLoader extends SpringBootContextLoader {
 			pairs[i] = "spring.profiles.active[" + i + "]=" + profiles[i];
 		}
 		TestPropertyValues.of(pairs).applyTo(environment);
-	}
-
-	private void configureAutowiringSupport(ConfigurableListableBeanFactory beanFactory) {
-		AutowiredAnnotationBeanPostProcessor beanPostProcessor = new AutowiredAnnotationBeanPostProcessor();
-		beanPostProcessor.setBeanFactory(beanFactory);
-		beanFactory.addBeanPostProcessor(beanPostProcessor);
 	}
 
 }
