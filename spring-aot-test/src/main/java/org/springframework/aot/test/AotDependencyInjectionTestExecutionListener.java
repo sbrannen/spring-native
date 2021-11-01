@@ -25,14 +25,18 @@ import java.util.Set;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import org.springframework.aot.context.bootstrap.generator.bean.descriptor.BeanInstanceDescriptor;
 import org.springframework.aot.context.bootstrap.generator.bean.descriptor.BeanInstanceDescriptor.MemberDescriptor;
-import org.springframework.aot.context.bootstrap.generator.bean.descriptor.InjectionPointsSupplier;
+import org.springframework.aot.context.bootstrap.generator.bean.descriptor.BeanInstanceDescriptorFactory;
+import org.springframework.aot.context.bootstrap.generator.bean.descriptor.DefaultBeanInstanceDescriptorFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.InjectionPoint;
 import org.springframework.beans.factory.UnsatisfiedDependencyException;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.DependencyDescriptor;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.MethodParameter;
@@ -106,8 +110,12 @@ public class AotDependencyInjectionTestExecutionListener extends AbstractTestExe
 
 		Class<?> testClass = testContext.getTestClass();
 		Object testInstance = testContext.getTestInstance();
-		InjectionPointsSupplier injectionPointsSupplier = new InjectionPointsSupplier(testClass.getClassLoader());
-		for (MemberDescriptor<?> injectionPoint : injectionPointsSupplier.detectInjectionPoints(testClass)) {
+
+		BeanDefinition beanDefinition = new RootBeanDefinition(testClass);
+		BeanInstanceDescriptorFactory beanInstanceDescriptorFactory = new DefaultBeanInstanceDescriptorFactory(beanFactory);
+		BeanInstanceDescriptor beanInstanceDescriptor = beanInstanceDescriptorFactory.create(beanDefinition);
+
+		for (MemberDescriptor<?> injectionPoint : beanInstanceDescriptor.getInjectionPoints()) {
 			if (injectionPoint.getMember() instanceof Method) {
 				Method method = (Method) injectionPoint.getMember();
 				if (logger.isDebugEnabled()) {
