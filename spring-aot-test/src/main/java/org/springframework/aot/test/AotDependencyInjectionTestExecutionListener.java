@@ -34,7 +34,7 @@ import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.DependencyDescriptor;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.core.MethodParameter;
 import org.springframework.lang.Nullable;
 import org.springframework.test.context.TestContext;
@@ -98,40 +98,41 @@ public class AotDependencyInjectionTestExecutionListener extends AbstractTestExe
 	}
 
 	protected void injectDependencies(TestContext testContext) throws Exception {
+		ApplicationContext applicationContext = testContext.getApplicationContext();
+		Assert.state(applicationContext instanceof GenericApplicationContext,
+			() -> "AOT ApplicationContext must be a GenericApplicationContext instead of " +
+					applicationContext.getClass().getName());
+		ConfigurableListableBeanFactory beanFactory = ((GenericApplicationContext) applicationContext).getBeanFactory();
+
 		Class<?> testClass = testContext.getTestClass();
 		Object testInstance = testContext.getTestInstance();
-		ApplicationContext applicationContext = testContext.getApplicationContext();
-		if (applicationContext instanceof ConfigurableApplicationContext) {
-			ConfigurableListableBeanFactory beanFactory = ((ConfigurableApplicationContext) applicationContext).getBeanFactory();
-
-			InjectionPointsSupplier injectionPointsSupplier = new InjectionPointsSupplier(testClass.getClassLoader());
-			for (MemberDescriptor<?> injectionPoint : injectionPointsSupplier.detectInjectionPoints(testClass)) {
-				if (injectionPoint.getMember() instanceof Method) {
-					Method method = (Method) injectionPoint.getMember();
-					if (logger.isDebugEnabled()) {
-						logger.debug("Performing dependency injection for method: " + method.toGenericString());
+		InjectionPointsSupplier injectionPointsSupplier = new InjectionPointsSupplier(testClass.getClassLoader());
+		for (MemberDescriptor<?> injectionPoint : injectionPointsSupplier.detectInjectionPoints(testClass)) {
+			if (injectionPoint.getMember() instanceof Method) {
+				Method method = (Method) injectionPoint.getMember();
+				if (logger.isDebugEnabled()) {
+					logger.debug("Performing dependency injection for method: " + method.toGenericString());
+				}
+				Object[] arguments = resolveMethodArguments(beanFactory, method, testInstance, injectionPoint.isRequired());
+				if (arguments != null) {
+					try {
+						ReflectionUtils.makeAccessible(method);
+						method.invoke(testInstance, arguments);
 					}
-					Object[] arguments = resolveMethodArguments(beanFactory, method, testInstance, injectionPoint.isRequired());
-					if (arguments != null) {
-						try {
-							ReflectionUtils.makeAccessible(method);
-							method.invoke(testInstance, arguments);
-						}
-						catch (InvocationTargetException ex) {
-							ReflectionUtils.rethrowException(ex.getTargetException());
-						}
+					catch (InvocationTargetException ex) {
+						ReflectionUtils.rethrowException(ex.getTargetException());
 					}
 				}
-				else if (injectionPoint.getMember() instanceof Field) {
-					Field field = (Field) injectionPoint.getMember();
-					if (logger.isDebugEnabled()) {
-						logger.debug("Performing dependency injection for field: " + field.toGenericString());
-					}
-					Object value = resolveFieldValue(beanFactory, field, testInstance, injectionPoint.isRequired());
-					if (value != null) {
-						ReflectionUtils.makeAccessible(field);
-						field.set(testInstance, value);
-					}
+			}
+			else if (injectionPoint.getMember() instanceof Field) {
+				Field field = (Field) injectionPoint.getMember();
+				if (logger.isDebugEnabled()) {
+					logger.debug("Performing dependency injection for field: " + field.toGenericString());
+				}
+				Object value = resolveFieldValue(beanFactory, field, testInstance, injectionPoint.isRequired());
+				if (value != null) {
+					ReflectionUtils.makeAccessible(field);
+					field.set(testInstance, value);
 				}
 			}
 		}
