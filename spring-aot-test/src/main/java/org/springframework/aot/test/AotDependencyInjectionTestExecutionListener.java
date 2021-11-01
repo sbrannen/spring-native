@@ -19,8 +19,6 @@ package org.springframework.aot.test;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -30,7 +28,6 @@ import org.springframework.aot.context.bootstrap.generator.bean.descriptor.BeanI
 import org.springframework.aot.context.bootstrap.generator.bean.descriptor.BeanInstanceDescriptorFactory;
 import org.springframework.aot.context.bootstrap.generator.bean.descriptor.DefaultBeanInstanceDescriptorFactory;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.InjectionPoint;
 import org.springframework.beans.factory.UnsatisfiedDependencyException;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -154,20 +151,13 @@ public class AotDependencyInjectionTestExecutionListener extends AbstractTestExe
 	@Nullable
 	private Object[] resolveMethodArguments(ConfigurableListableBeanFactory beanFactory, Method method, Object bean, boolean required) {
 		Assert.notNull(beanFactory, "No BeanFactory available");
-		final String beanName = null;
-		final int argumentCount = method.getParameterCount();
-
-		Object[] arguments = new Object[argumentCount];
-		DependencyDescriptor[] descriptors = new DependencyDescriptor[argumentCount];
-		Set<String> autowiredBeans = new LinkedHashSet<>(argumentCount);
-		TypeConverter typeConverter = beanFactory.getTypeConverter();
+		Object[] arguments = new Object[method.getParameterCount()];
 		for (int i = 0; i < arguments.length; i++) {
 			MethodParameter methodParam = new MethodParameter(method, i);
-			DependencyDescriptor currDesc = new DependencyDescriptor(methodParam, required);
-			currDesc.setContainingClass(bean.getClass());
-			descriptors[i] = currDesc;
 			try {
-				Object arg = beanFactory.resolveDependency(currDesc, beanName, autowiredBeans, typeConverter);
+				DependencyDescriptor descriptor = new DependencyDescriptor(methodParam, required);
+				descriptor.setContainingClass(bean.getClass());
+				Object arg = beanFactory.resolveDependency(descriptor, null);
 				if (arg == null && !required) {
 					arguments = null;
 					break;
@@ -175,7 +165,7 @@ public class AotDependencyInjectionTestExecutionListener extends AbstractTestExe
 				arguments[i] = arg;
 			}
 			catch (BeansException ex) {
-				throw new UnsatisfiedDependencyException(null, beanName, new InjectionPoint(methodParam), ex);
+				throw new UnsatisfiedDependencyException(null, null, new InjectionPoint(methodParam), ex);
 			}
 		}
 		return arguments;
@@ -189,20 +179,14 @@ public class AotDependencyInjectionTestExecutionListener extends AbstractTestExe
 	@Nullable
 	private Object resolveFieldValue(ConfigurableListableBeanFactory beanFactory, Field field, Object bean, boolean required) {
 		Assert.notNull(beanFactory, "No BeanFactory available");
-		final String beanName = null;
-
-		DependencyDescriptor desc = new DependencyDescriptor(field, required);
-		desc.setContainingClass(bean.getClass());
-		Set<String> autowiredBeanNames = new LinkedHashSet<>(1);
-		TypeConverter typeConverter = beanFactory.getTypeConverter();
-		Object value;
 		try {
-			value = beanFactory.resolveDependency(desc, beanName, autowiredBeanNames, typeConverter);
+			DependencyDescriptor descriptor = new DependencyDescriptor(field, required);
+			descriptor.setContainingClass(bean.getClass());
+			return beanFactory.resolveDependency(descriptor, null);
 		}
 		catch (BeansException ex) {
-			throw new UnsatisfiedDependencyException(null, beanName, new InjectionPoint(field), ex);
+			throw new UnsatisfiedDependencyException(null, null, new InjectionPoint(field), ex);
 		}
-		return value;
 	}
 
 }
